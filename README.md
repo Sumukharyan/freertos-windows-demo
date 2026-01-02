@@ -31,3 +31,10 @@
 - Used auto-reload timers for heartbeat functionality
 - Designed non-blocking timer callbacks executed in Timer Service Task
 - Replaced delay-based periodic tasks with event-driven timing
+
+## Day 11: RTOS + MQTT Architecture Design
+
+- Designed RTOS-based MQTT communication architecture
+- Separated sensor, networking, and application logic into dedicated tasks
+- Used queues for data transfer between real-time tasks and MQTT networking
+- Prepared design scalable to embedded targets such as ESP32 and STM32
