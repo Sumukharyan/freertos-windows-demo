@@ -1,45 +1,52 @@
 #include <stdio.h>
 #include "FreeRTOS.h"
 #include "task.h"
+#include "queue.h"
+QueueHandle_t sensorQueue;
 
-void led_task(void *pvParameters)
+void sensor_task(void *pvParameters)
 {
+    int sensor_value = 0;
+
     while (1)
     {
-        printf("LED Task running\n");
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        sensor_value++;
+
+        xQueueSend(
+            sensorQueue,   // queue handle
+            &sensor_value, // address of data
+            portMAX_DELAY  // wait until space available
+        );
+
+        vTaskDelay(pdMS_TO_TICKS(1000)); // 1 second
     }
 }
-
 void logger_task(void *pvParameters)
 {
+    int received_value;
+
     while (1)
     {
-        printf("Logger Task alive\n");
-        vTaskDelay(pdMS_TO_TICKS(2000));
+        if (xQueueReceive(
+                sensorQueue,     // queue handle
+                &received_value, // where to store data
+                portMAX_DELAY    // wait until data arrives
+                ) == pdPASS)
+        {
+            printf("Sensor value received: %d\n", received_value);
+        }
     }
 }
 
 int main(void)
 {
-    xTaskCreate(
-        led_task,
-        "LED",
-        256,
-        NULL,
-        1,
-        NULL);
+    sensorQueue = xQueueCreate(5, sizeof(int));
 
-    xTaskCreate(
-        logger_task,
-        "LOGGER",
-        256,
-        NULL,
-        2,
-        NULL);
+    xTaskCreate(sensor_task, "SENSOR", 256, NULL, 2, NULL);
+    xTaskCreate(logger_task, "LOGGER", 256, NULL, 1, NULL);
 
     vTaskStartScheduler();
 
-    for (;;)
+    while (1)
         ;
 }
