@@ -3,11 +3,13 @@
 #include "task.h"
 #include "queue.h"
 #include "semphr.h"
+#include "timers.h"
 
 QueueHandle_t sensorQueue;
 SemaphoreHandle_t eventSemaphore;
 SemaphoreHandle_t uartMutex;
 SemaphoreHandle_t isrSemaphore;
+TimerHandle_t heartbeatTimer;
 
 void safe_print(const char *msg)
 {
@@ -89,6 +91,11 @@ void isr_handler_task(void *pvParameters)
         printf("ISR event handled in task context\n");
     }
 }
+void heartbeat_timer_callback(TimerHandle_t xTimer)
+{
+    /* Do NOT block here */
+    safe_print("Heartbeat: system alive");
+}
 
 int main(void)
 {
@@ -100,9 +107,11 @@ int main(void)
     xTaskCreate(logger_task, "LOGGER", 256, NULL, 1, NULL);
     xTaskCreate(producer_task, "PRODUCER", 256, NULL, 2, NULL);
     xTaskCreate(consumer_task, "CONSUMER", 256, NULL, 1, NULL);
-    xTaskCreate(isr_simulator_task, "ISR_SIM", 256, NULL, 1, NULL);
+    xTaskCreate(simulated_timer_isr, "ISR_SIM", 256, NULL, 1, NULL);
     xTaskCreate(isr_handler_task, "ISR_HANDLER", 512, NULL, 3, NULL);
+    heartbeatTimer = xTimerCreate("HEARTBEAT", pdMS_TO_TICKS(2000), pdTRUE, NULL, heartbeat_timer_callback);
 
+    xTimerStart(heartbeatTimer, 0);
     vTaskStartScheduler();
 
     while (1)

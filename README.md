@@ -24,3 +24,10 @@
 - Used binary semaphore for deferred interrupt processing
 - Applied `xSemaphoreGiveFromISR` and context switching from ISR
 - Designed ISR logic to be minimal and non-blocking
+
+## Day 10: FreeRTOS Software Timers
+
+- Implemented periodic operations using FreeRTOS software timers
+- Used auto-reload timers for heartbeat functionality
+- Designed non-blocking timer callbacks executed in Timer Service Task
+- Replaced delay-based periodic tasks with event-driven timing
