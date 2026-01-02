@@ -6,7 +6,15 @@
 
 QueueHandle_t sensorQueue;
 SemaphoreHandle_t eventSemaphore;
+SemaphoreHandle_t uartMutex;
+SemaphoreHandle_t isrSemaphore;
 
+void safe_print(const char *msg)
+{
+    xSemaphoreTake(uartMutex, portMAX_DELAY);
+    printf("%s\n", msg);
+    xSemaphoreGive(uartMutex);
+}
 void sensor_task(void *pvParameters)
 {
     int sensor_value = 0;
@@ -62,15 +70,38 @@ void consumer_task(void *pvParameters)
     }
 }
 
+void simulated_timer_isr(void)
+{
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+
+    xSemaphoreGiveFromISR(
+        isrSemaphore,
+        &xHigherPriorityTaskWoken);
+
+    /* Request context switch if needed */
+    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+}
+void isr_handler_task(void *pvParameters)
+{
+    while (1)
+    {
+        xSemaphoreTake(isrSemaphore, portMAX_DELAY);
+        printf("ISR event handled in task context\n");
+    }
+}
+
 int main(void)
 {
     sensorQueue = xQueueCreate(5, sizeof(int));
     eventSemaphore = xSemaphoreCreateBinary();
+    uartMutex = xSemaphoreCreateMutex();
 
     xTaskCreate(sensor_task, "SENSOR", 256, NULL, 2, NULL);
     xTaskCreate(logger_task, "LOGGER", 256, NULL, 1, NULL);
     xTaskCreate(producer_task, "PRODUCER", 256, NULL, 2, NULL);
     xTaskCreate(consumer_task, "CONSUMER", 256, NULL, 1, NULL);
+    xTaskCreate(isr_simulator_task, "ISR_SIM", 256, NULL, 1, NULL);
+    xTaskCreate(isr_handler_task, "ISR_HANDLER", 512, NULL, 3, NULL);
 
     vTaskStartScheduler();
 
